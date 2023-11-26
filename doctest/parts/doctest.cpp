@@ -2978,6 +2978,9 @@ namespace {
         void printIntro() {
             if(opt.no_intro == false) {
                 printVersion();
+                if (opt.no_seed_in_intro == false)
+                    s << Color::Cyan << "[doctest] " << Color::None << "random seed is "
+                      << opt.rand_seed << '\n';
                 s << Color::Cyan << "[doctest] " << Color::None
                   << "run with \"--" DOCTEST_OPTIONS_PREFIX_DISPLAY "help\" for options\n";
             }
@@ -3077,6 +3080,8 @@ namespace {
               << Whitespace(sizePrefixDisplay*1) << "skips all runtime doctest operations\n";
             s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "ni,  --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-intro=<bool>               "
               << Whitespace(sizePrefixDisplay*1) << "omit the framework intro in the output\n";
+            s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "nsi, --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-seed-in-intro=<bool>       "
+              << Whitespace(sizePrefixDisplay*1) << "omit the random seed from the intro output\n";
             s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "nv,  --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-version=<bool>             "
               << Whitespace(sizePrefixDisplay*1) << "omit the framework version in the output\n";
             s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "nc,  --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-colors=<bool>              "
@@ -3569,8 +3574,18 @@ void Context::parseArgs(int argc, const char* const* argv, bool withDefaults) {
 
     // clang-format off
     DOCTEST_PARSE_STR_OPTION("out", "o", out, "");
-    DOCTEST_PARSE_STR_OPTION("order-by", "ob", order_by, "file");
-    DOCTEST_PARSE_INT_OPTION("rand-seed", "rs", rand_seed, 0);
+    DOCTEST_PARSE_STR_OPTION("order-by", "ob", order_by, DOCTEST_CONFIG_ORDER_BY_DEFAULT);
+    auto const default_seed = [] {
+#ifdef DOCTEST_CONFIG_INITIALIZE_RAND_SEED
+        std::srand(static_cast<unsigned long long>(std::time(nullptr)) * std::clock());
+        unsigned result;
+        while ((result = static_cast<unsigned>(std::rand())) == 0u) { }
+        return result;
+#else
+        return 0u;
+#endif
+    }();
+    DOCTEST_PARSE_INT_OPTION("rand-seed", "rs", rand_seed, default_seed);
 
     DOCTEST_PARSE_INT_OPTION("first", "f", first, 0);
     DOCTEST_PARSE_INT_OPTION("last", "l", last, UINT_MAX);
@@ -3588,6 +3603,7 @@ void Context::parseArgs(int argc, const char* const* argv, bool withDefaults) {
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-exitcode", "ne", no_exitcode, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-run", "nr", no_run, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-intro", "ni", no_intro, false);
+    DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-seed-in-intro", "nsi", no_seed_in_intro, DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-version", "nv", no_version, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-colors", "nc", no_colors, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("force-colors", "fc", force_colors, false);

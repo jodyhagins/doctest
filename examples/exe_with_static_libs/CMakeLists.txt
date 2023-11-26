@@ -24,4 +24,4 @@ set_target_properties(lib_1 PROPERTIES FOLDER exe_with_static_libs)
 set_target_properties(lib_2 PROPERTIES FOLDER exe_with_static_libs)
 set_target_properties(exe_with_static_libs PROPERTIES FOLDER exe_with_static_libs)
 
-doctest_add_test(NAME exe_with_static_libs COMMAND $<TARGET_FILE:exe_with_static_libs> --no-version)
+doctest_add_test(NAME exe_with_static_libs COMMAND $<TARGET_FILE:exe_with_static_libs> --no-version --no-seed-in-intro=false)

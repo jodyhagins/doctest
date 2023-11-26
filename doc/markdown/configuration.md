@@ -39,6 +39,9 @@ Defining something ```globally``` means for every source file of the binary (exe
 - [**```DOCTEST_CONFIG_NO_CONTRADICTING_INLINE```**](#doctest_config_no_contradicting_inline)
 - [**```DOCTEST_CONFIG_NO_INCLUDE_IOSTREAM```**](#doctest_config_no_include_iostream)
 - [**```DOCTEST_CONFIG_HANDLE_EXCEPTION```**](#doctest_config_handle_exception)
+- [**```DOCTEST_CONFIG_ORDER_BY_DEFAULT```**](#doctest_config_order_by_default)
+- [**```DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT```**](#doctest_config_no_seed_in_intro_default)
+- [**```DOCTEST_CONFIG_INITIALIZE_RAND_SEED```**](#doctest_config_initialize_rand_seed)
 
 For most people the only configuration needed is telling **doctest** which source file should host all the implementation code:
 
@@ -306,13 +309,53 @@ However, this is known to cause some issues with a few compilers with hard to su
 ### **```DOCTEST_CONFIG_NO_INCLUDE_IOSTREAM```**
 
 This option disables any inclusion of `<iostream>`, `std::cout` and `std::cerr`. This implies that the `cout` context field must be supplied.  If
-```DOCTEST_CONFIG_NO_EXCEPTIONS``` is defined, then the unhandled exception is not printed to `std::cerr`.
-[```DOCTEST_CONFIG_HANDLE_EXCEPTION```](#doctest_config_handle_exception) can be defined to handle this case.
+[**```DOCTEST_CONFIG_NO_EXCEPTIONS```**](#doctest_config_no_exceptions) is defined, then the unhandled exception is not printed to `std::cerr`.
+[**```DOCTEST_CONFIG_HANDLE_EXCEPTION```**](#doctest_config_handle_exception) can be defined to handle this case.
 
 ### **```DOCTEST_CONFIG_HANDLE_EXCEPTION```**
 
 This macro function can be defined to handle exceptions instead of just printing them
 to `std::cerr`.
+
+
+### **```DOCTEST_CONFIG_ORDER_BY_DEFAULT```**
+
+If the `order-by` command line option is not provided, a default value will
+be used.
+This macro allows that default value to be configurable.
+If not defined, the default value will be `"file"`.
+
+### **```DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT```**
+
+If the `no-seed-in-intro` command line  option is not provided, a default
+value will be used.
+This macro allows that default value to be configurable.
+If not defined, the default value will be `true`.
+
+### **```DOCTEST_CONFIG_INITIALIZE_RAND_SEED```**
+
+If execution order is `order-by=rand`, but no explicit seed is provided with
+`rand-seed=<value>`, the default seed of 0 is used, which means that the tests
+do run in a "random" fashion, compared to the other orderings, but the ordering
+will always be the same.
+
+When this macro is defined, the `rand_seed` option will be initialized with a
+non-zero pseudo-random value.
+This means that each invocation with `order-by=rand` will run the tests in a
+different random order.
+
+When combined with `-DDOCTEST_CONFIG_ORDER_BY_DEFAULT="rand"`, the default
+operation for executing tests will be a different random ordering each time
+the tests are executed.
+
+If `no-seed-in-intro` is `false` then the random seed that is being used will
+be printed inside the intro section of the test output.
+This allows consistent execution of the tests in a random order, with the
+ability to reproduce the same random execution if a test fails.
+
+Note that a nice side-effect of this option means that tests can also use the
+same seed as a tool for seeding their own random number generator, which
+provides a reasonable way of reproducing "randomness' in tests.
 
 ---------------
 

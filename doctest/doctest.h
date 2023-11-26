@@ -490,6 +490,16 @@ DOCTEST_GCC_SUPPRESS_WARNING_POP
 #endif
 #endif // DOCTEST_CONFIG_USE_IOSFWD
 
+// Allow user to decide the default order-by value
+#ifndef DOCTEST_CONFIG_ORDER_BY_DEFAULT
+#define DOCTEST_CONFIG_ORDER_BY_DEFAULT "file"
+#endif // DOCTEST_CONFIG_ORDER_BY_DEFAULT
+
+// Allow user to decide the default no-seed-in-intro value
+#ifndef DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT
+#define DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT true
+#endif // DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT
+
 // for clang - always include ciso646 (which drags some std stuff) because
 // we want to check if we are using libc++ with the _LIBCPP_VERSION macro in
 // which case we don't want to forward declare stuff from std - for reference:
@@ -918,6 +928,7 @@ struct ContextOptions //!OCLINT too many fields
     bool no_exitcode;          // if the framework should return 0 as the exitcode
     bool no_run;               // to not run the tests at all (can be done with an "*" exclude)
     bool no_intro;             // to not print the intro of the framework
+    bool no_seed_in_intro;     // to not print random seed in the intro of the framework
     bool no_version;           // to not print the version of the framework
     bool no_colors;            // if output to the console should be colorized
     bool force_colors;         // forces the use of colors even when a tty cannot be detected
@@ -6068,6 +6079,9 @@ namespace {
         void printIntro() {
             if(opt.no_intro == false) {
                 printVersion();
+                if (opt.no_seed_in_intro == false)
+                    s << Color::Cyan << "[doctest] " << Color::None << "random seed is "
+                      << opt.rand_seed << '\n';
                 s << Color::Cyan << "[doctest] " << Color::None
                   << "run with \"--" DOCTEST_OPTIONS_PREFIX_DISPLAY "help\" for options\n";
             }
@@ -6167,6 +6181,8 @@ namespace {
               << Whitespace(sizePrefixDisplay*1) << "skips all runtime doctest operations\n";
             s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "ni,  --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-intro=<bool>               "
               << Whitespace(sizePrefixDisplay*1) << "omit the framework intro in the output\n";
+            s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "nsi, --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-seed-in-intro=<bool>       "
+              << Whitespace(sizePrefixDisplay*1) << "omit the random seed from the intro output\n";
             s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "nv,  --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-version=<bool>             "
               << Whitespace(sizePrefixDisplay*1) << "omit the framework version in the output\n";
             s << " -" DOCTEST_OPTIONS_PREFIX_DISPLAY "nc,  --" DOCTEST_OPTIONS_PREFIX_DISPLAY "no-colors=<bool>              "
@@ -6659,8 +6675,18 @@ void Context::parseArgs(int argc, const char* const* argv, bool withDefaults) {
 
     // clang-format off
     DOCTEST_PARSE_STR_OPTION("out", "o", out, "");
-    DOCTEST_PARSE_STR_OPTION("order-by", "ob", order_by, "file");
-    DOCTEST_PARSE_INT_OPTION("rand-seed", "rs", rand_seed, 0);
+    DOCTEST_PARSE_STR_OPTION("order-by", "ob", order_by, DOCTEST_CONFIG_ORDER_BY_DEFAULT);
+    auto const default_seed = [] {
+#ifdef DOCTEST_CONFIG_INITIALIZE_RAND_SEED
+        std::srand(static_cast<unsigned long long>(std::time(nullptr)) * std::clock());
+        unsigned result;
+        while ((result = static_cast<unsigned>(std::rand())) == 0u) { }
+        return result;
+#else
+        return 0u;
+#endif
+    }();
+    DOCTEST_PARSE_INT_OPTION("rand-seed", "rs", rand_seed, default_seed);
 
     DOCTEST_PARSE_INT_OPTION("first", "f", first, 0);
     DOCTEST_PARSE_INT_OPTION("last", "l", last, UINT_MAX);
@@ -6678,6 +6704,7 @@ void Context::parseArgs(int argc, const char* const* argv, bool withDefaults) {
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-exitcode", "ne", no_exitcode, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-run", "nr", no_run, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-intro", "ni", no_intro, false);
+    DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-seed-in-intro", "nsi", no_seed_in_intro, DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-version", "nv", no_version, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-colors", "nc", no_colors, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("force-colors", "fc", force_colors, false);

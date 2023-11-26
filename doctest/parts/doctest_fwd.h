@@ -487,6 +487,16 @@ DOCTEST_GCC_SUPPRESS_WARNING_POP
 #endif
 #endif // DOCTEST_CONFIG_USE_IOSFWD
 
+// Allow user to decide the default order-by value
+#ifndef DOCTEST_CONFIG_ORDER_BY_DEFAULT
+#define DOCTEST_CONFIG_ORDER_BY_DEFAULT "file"
+#endif // DOCTEST_CONFIG_ORDER_BY_DEFAULT
+
+// Allow user to decide the default no-seed-in-intro value
+#ifndef DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT
+#define DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT true
+#endif // DOCTEST_CONFIG_NO_SEED_IN_INTRO_DEFAULT
+
 // for clang - always include ciso646 (which drags some std stuff) because
 // we want to check if we are using libc++ with the _LIBCPP_VERSION macro in
 // which case we don't want to forward declare stuff from std - for reference:
@@ -915,6 +925,7 @@ struct ContextOptions //!OCLINT too many fields
     bool no_exitcode;          // if the framework should return 0 as the exitcode
     bool no_run;               // to not run the tests at all (can be done with an "*" exclude)
     bool no_intro;             // to not print the intro of the framework
+    bool no_seed_in_intro;     // to not print random seed in the intro of the framework
     bool no_version;           // to not print the version of the framework
     bool no_colors;            // if output to the console should be colorized
     bool force_colors;         // forces the use of colors even when a tty cannot be detected
