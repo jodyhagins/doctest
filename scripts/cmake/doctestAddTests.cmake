@@ -12,9 +12,32 @@ set(script)
 set(suite)
 set(tests)
 
+# CMake list iteration ("foreach(x ${list})") interprets unbalanced '['
+# in a list element as opening a bracket-argument, which silently fuses
+# every following element into one. Test-case names containing '[' or ']'
+# therefore corrupt the discovered list. Work around by encoding brackets
+# in the listing output before any list operation, and decoding inside
+# `add_command` just before the bracket-argument wrapper that emits each
+# arg into the CTest script.
+set(_doctest_lbracket_sentinel "@@DOCTEST_LBRACKET@@")
+set(_doctest_rbracket_sentinel "@@DOCTEST_RBRACKET@@")
+
+function(_doctest_encode_brackets out_var in)
+  string(REPLACE "[" "${_doctest_lbracket_sentinel}" _t "${in}")
+  string(REPLACE "]" "${_doctest_rbracket_sentinel}" _t "${_t}")
+  set(${out_var} "${_t}" PARENT_SCOPE)
+endfunction()
+
+function(_doctest_decode_brackets out_var in)
+  string(REPLACE "${_doctest_lbracket_sentinel}" "[" _t "${in}")
+  string(REPLACE "${_doctest_rbracket_sentinel}" "]" _t "${_t}")
+  set(${out_var} "${_t}" PARENT_SCOPE)
+endfunction()
+
 function(add_command NAME)
   set(_args "")
   foreach(_arg ${ARGN})
+    _doctest_decode_brackets(_arg "${_arg}")
     if(_arg MATCHES "[^-./:a-zA-Z0-9_]")
       set(_args "${_args} [==[${_arg}]==]") # form a bracket_argument
     else()
@@ -49,19 +72,25 @@ if(NOT ${result} EQUAL 0)
   )
 endif()
 
+_doctest_encode_brackets(output "${output}")
 string(REPLACE "\n" ";" output "${output}")
 
 # Parse output
 foreach(line ${output})
-  if("${line}" STREQUAL "===============================================================================" OR "${line}" MATCHES [==[^\[doctest\] ]==])
+  _doctest_decode_brackets(line_decoded "${line}")
+  if("${line_decoded}" STREQUAL "===============================================================================" OR "${line_decoded}" MATCHES [==[^\[doctest\] ]==])
     continue()
   endif()
-  set(test ${line})
+  # Keep `test` encoded so subsequent CMake list/argument handling
+  # (including add_command's own foreach over ARGN) is bracket-safe.
+  # Decoding happens inside add_command at script-emit time.
+  set(test "${line}")
+  set(test_decoded "${line_decoded}")
   set(labels "")
   if(${add_labels})
     # get test suite that test belongs to
     execute_process(
-      COMMAND ${TEST_EXECUTOR} "${TEST_EXECUTABLE}" --test-case=${test} --list-test-suites
+      COMMAND ${TEST_EXECUTOR} "${TEST_EXECUTABLE}" --test-case=${test_decoded} --list-test-suites
       OUTPUT_VARIABLE labeloutput
       RESULT_VARIABLE labelresult
       WORKING_DIRECTORY "${TEST_WORKING_DIR}"
@@ -74,9 +103,11 @@ foreach(line ${output})
       )
     endif()
 
+    _doctest_encode_brackets(labeloutput, "${labeloutput}")
     string(REPLACE "\n" ";" labeloutput "${labeloutput}")
     foreach(labelline ${labeloutput})
-      if("${labelline}" STREQUAL "===============================================================================" OR "${labelline}" MATCHES [==[^\[doctest\] ]==])
+      _doctest_decode_brackets(labelline_decoded "${labelline}")
+      if("${labelline_decoded}" STREQUAL "===============================================================================" OR "${labelline_decoded}" MATCHES [==[^\[doctest\] ]==])
         continue()
       endif()
       list(APPEND labels ${labelline})
@@ -85,13 +116,13 @@ foreach(line ${output})
 
   if(NOT "${junit_output_dir}" STREQUAL "")
     # turn testname into a valid filename by replacing all special characters with "-"
-    string(REGEX REPLACE "[/\\:\"|<>]" "-" test_filename "${test}")
+    string(REGEX REPLACE "[/\\:\"|<>]" "-" test_filename "${test_decoded}")
     set(TEST_JUNIT_OUTPUT_PARAM "--reporters=junit" "--out=${junit_output_dir}/${prefix}${test_filename}${suffix}.xml")
   else()
     unset(TEST_JUNIT_OUTPUT_PARAM)
   endif()
   # use escape commas to handle properly test cases with commas inside the name
-  string(REPLACE "," "\\," test_name ${test})
+  string(REPLACE "," "\\," test_name "${test}")
   # ...and add to script
   add_command(add_test
     "${prefix}${test}${suffix}"
