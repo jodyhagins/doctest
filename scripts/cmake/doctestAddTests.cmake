@@ -103,7 +103,7 @@ foreach(line ${output})
       )
     endif()
 
-    _doctest_encode_brackets(labeloutput, "${labeloutput}")
+    _doctest_encode_brackets(labeloutput "${labeloutput}")
     string(REPLACE "\n" ";" labeloutput "${labeloutput}")
     foreach(labelline ${labeloutput})
       _doctest_decode_brackets(labelline_decoded "${labelline}")
